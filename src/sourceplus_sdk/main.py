@@ -27,7 +27,7 @@ import aiofiles
 def download_images(
     file_path: str,
     output_folder: str,
-    num_download_jobs: int = 10,
+    num_download_jobs: int = 50,
     limit_images: int = -1,
     url_column_name: str = "url",
     show_progress: bool = False,
@@ -37,7 +37,7 @@ def download_images(
     Args:
         file_path (str): The path to the file containing the URLs of the images to download.
         output_folder (str): The path to the folder where the images will be saved.
-        num_download_jobs (int, optional): The maximum number of parallel downloads. Defaults to 10.
+        num_download_jobs (int, optional): The maximum number of parallel downloads. Defaults to 50.
         limit_images (int, optional): The maximum number of images to download. Defaults to -1, which means all images.
         url_column_name (str, optional): The name of the column containing the URLs in the file. Defaults to "url".
         show_progress (bool, optional): Whether to show a progress bar. Defaults to False.
@@ -180,17 +180,25 @@ async def start_image_downloads(df: pd.DataFrame, max_parallel_downloads: int, m
     success_counter = AsyncCounter()
     failure_counter = AsyncCounter()
     tasks = []
+
+    # make http client
+    http_client = httpx.AsyncClient(timeout=10)
+
+    # create tasks
     for i in range(0, max_images if max_images > 0 else len(df)):
         row = next(download_queue)
         url = row[1]["url"]
-        tasks.append(download_image(url, semaphore, success_counter, failure_counter, destination_folder, api_key))
+        tasks.append(download_image(http_client, url, semaphore, success_counter, failure_counter, destination_folder, api_key))
 
     # start the progress monitor
     if show_progress:
         tasks.insert(0, progress_monitor(success_counter, failure_counter, max_images))
 
-    # wait for all tasks to complete
-    await asyncio.gather(*tasks)
+    # wait for all tasks to complete and close client
+    try:
+        await asyncio.gather(*tasks)
+    finally:
+        await http_client.aclose()
 
 
 async def progress_monitor(success_counter: AsyncCounter, failure_counter: AsyncCounter, total_images: int):
@@ -225,16 +233,17 @@ async def progress_monitor(success_counter: AsyncCounter, failure_counter: Async
 
         if num_completed == total_images:
             break
-        await asyncio.sleep(.5)
+        await asyncio.sleep(.1)
 
     print(f"Total images: {total_images}. Successes: {successes}. Failures: {failures}")
 
 
-async def download_image(url: str, semaphore: asyncio.Semaphore, success_counter: AsyncCounter, failure_counter: AsyncCounter, destination_folder: str, api_key: str):
+async def download_image(client: httpx.AsyncClient,  url: str, semaphore: asyncio.Semaphore, success_counter: AsyncCounter, failure_counter: AsyncCounter, destination_folder: str, api_key: str):
     """
     Downloads an image from the given URL, using the semaphore to control the number of parallel downloads.
 
     Args:
+        client (httpx.AsyncClient): The HTTP client to use for downloading the image.
         url (str): The URL of the image to download.
         semaphore (asyncio.Semaphore): The semaphore to control the number of parallel downloads.
         success_counter (AsyncCounter): The counter to keep track of the number of successful downloads.
@@ -254,20 +263,19 @@ async def download_image(url: str, semaphore: asyncio.Semaphore, success_counter
             await success_counter.increment()
             return
 
-        async with httpx.AsyncClient(timeout=10) as client:
-            try:
-                async with client.stream("GET", url, headers={"Authorization": f"API {api_key}"}, follow_redirects=True) as response:
-                    if response.status_code == 200:
-                        image_data = await response.aread()
-                        async with aiofiles.open(file_path, "wb") as f:
-                            await f.write(image_data)
-                        await success_counter.increment()
-                    else:
-                        #logging.error(f"Failed to download image from URL: {url} - {response.status_code}")
-                        await failure_counter.increment()
-            except Exception as e:
-                #logging.error(f"Failed to download image from URL: {url} - {e}")
-                await failure_counter.increment()
+        try:
+            async with client.stream("GET", url, headers={"Authorization": f"API {api_key}"}, follow_redirects=True) as response:
+                if response.status_code == 200:
+                    image_data = await response.aread()
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(image_data)
+                    await success_counter.increment()
+                else:
+                    #logging.error(f"Failed to download image from URL: {url} - {response.status_code}")
+                    await failure_counter.increment()
+        except Exception as e:
+            #logging.error(f"Failed to download image from URL: {url} - {e}")
+            await failure_counter.increment()
 
 # ---- CLI ----
 # The functions defined in this section are wrappers around the main Python
@@ -289,7 +297,7 @@ def parse_args(args):
     parser.add_argument("command", help="Command to execute. Valid commands: download_images", type=str)
     parser.add_argument("-f", "--file", dest="file_path", help="Path to the file which contains the image URLs.", type=str)
     parser.add_argument("-o", "--output", dest="output_folder", help="Path to the destination folder to download the images.", type=str)
-    parser.add_argument("-j", "--jobs", dest="num_download_jobs", default=10, help="The maximum number of download jobs running in parallel. A value too high will cause resource contention and slow down the overall download rate.", type=int)
+    parser.add_argument("-j", "--jobs", dest="num_download_jobs", default=50, help="The maximum number of download jobs running in parallel. Default is 50. A value too high will cause resource contention and slow down the overall download rate.", type=int)
     parser.add_argument("-l", "--limit", dest="limit_images", default=-1, help="The maximum number of images you want to download from the file.", type=int)
     parser.add_argument("-n", "--name", dest="url_column_name", default="url", help="The column name for the url field.", type=str)
     parser.add_argument("-p", "--progress", dest="show_progress", default=True, help="Show progress bar.", type=bool)

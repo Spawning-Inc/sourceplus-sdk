@@ -3,6 +3,8 @@ from unittest.mock import patch
 import os
 import asyncio
 
+import httpx
+
 import sourceplus_sdk.main
 from sourceplus_sdk.libs import AsyncCounter
 
@@ -86,20 +88,24 @@ class TestMain(TestCase):
             sem = asyncio.Semaphore(1)
             success_counter = AsyncCounter()
             failure_counter = AsyncCounter()
+            httpx_client = httpx.AsyncClient()
 
-            await sourceplus_sdk.main.download_image(url, sem, success_counter, failure_counter, destination_folder, api_key)
-            self.assertEqual(await success_counter.get(), 1)
-            self.assertEqual(await failure_counter.get(), 0)
+            try:
+                await sourceplus_sdk.main.download_image(httpx_client, url, sem, success_counter, failure_counter, destination_folder, api_key)
+                self.assertEqual(await success_counter.get(), 1)
+                self.assertEqual(await failure_counter.get(), 0)
 
-            # test same url
-            await sourceplus_sdk.main.download_image(url, sem, success_counter, failure_counter, destination_folder, api_key)
-            self.assertEqual(await success_counter.get(), 2)
-            self.assertEqual(await failure_counter.get(), 0)
+                # test same url
+                await sourceplus_sdk.main.download_image(httpx_client, url, sem, success_counter, failure_counter, destination_folder, api_key)
+                self.assertEqual(await success_counter.get(), 2)
+                self.assertEqual(await failure_counter.get(), 0)
 
-            # test bad url
-            await sourceplus_sdk.main.download_image("https://spawning.substack.com/sdk.test.jpg", sem, success_counter, failure_counter, destination_folder, api_key)
-            self.assertEqual(await success_counter.get(), 2)
-            self.assertEqual(await failure_counter.get(), 1)
+                # test bad url
+                await sourceplus_sdk.main.download_image(httpx_client, "https://spawning.substack.com/sdk.test.jpg", sem, success_counter, failure_counter, destination_folder, api_key)
+                self.assertEqual(await success_counter.get(), 2)
+                self.assertEqual(await failure_counter.get(), 1)
+            finally:
+                await httpx_client.aclose()
 
         asyncio.run(async_test_image())
 
