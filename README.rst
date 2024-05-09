@@ -28,7 +28,9 @@ If you prefer to not make this change, then you can also provide your API Key du
 Installation
 ------------
 
-Next, you'll need to install the SDK. You can do this using pip::
+First, you need to have pip installed on your system. If you don't have pip installed, you can install it by following the instructions `here <https://pip.pypa.io/en/stable/installing/>`_.
+
+Next, you'll need to install the Source.Plus SDK. You can do this using pip::
 
         pip install sourceplus-sdk
 
@@ -36,7 +38,7 @@ Next, you'll need to install the SDK. You can do this using pip::
 Usage
 -----
 
-Once you have installed the SDK, you can use it download images from a parquet file.
+Once you have installed the SDK, you can use it download images from a parquet file::
 
         sourceplus download_images -f /path/to/export.parquet -o /path/to/output/directory
 
