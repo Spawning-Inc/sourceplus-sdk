@@ -2,4 +2,4 @@
 Contributors
 ============
 
-* Nick Padgett <nickpadge@gmail.com>
+* Nick Padgett <nick@spawning.ai>

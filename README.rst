@@ -1,49 +1,54 @@
-.. These are examples of badges you might want to add to your README:
-   please update the URLs accordingly
-
-    .. image:: https://api.cirrus-ci.com/github/<USER>/sourceplus-sdk.svg?branch=main
-        :alt: Built Status
-        :target: https://cirrus-ci.com/github/<USER>/sourceplus-sdk
-    .. image:: https://readthedocs.org/projects/sourceplus-sdk/badge/?version=latest
-        :alt: ReadTheDocs
-        :target: https://sourceplus-sdk.readthedocs.io/en/stable/
-    .. image:: https://img.shields.io/coveralls/github/<USER>/sourceplus-sdk/main.svg
-        :alt: Coveralls
-        :target: https://coveralls.io/r/<USER>/sourceplus-sdk
-    .. image:: https://img.shields.io/pypi/v/sourceplus-sdk.svg
-        :alt: PyPI-Server
-        :target: https://pypi.org/project/sourceplus-sdk/
-    .. image:: https://img.shields.io/conda/vn/conda-forge/sourceplus-sdk.svg
-        :alt: Conda-Forge
-        :target: https://anaconda.org/conda-forge/sourceplus-sdk
-    .. image:: https://pepy.tech/badge/sourceplus-sdk/month
-        :alt: Monthly Downloads
-        :target: https://pepy.tech/project/sourceplus-sdk
-    .. image:: https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Twitter
-        :alt: Twitter
-        :target: https://twitter.com/sourceplus-sdk
-
-.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
-    :alt: Project generated with PyScaffold
-    :target: https://pyscaffold.org/
-
-|
 
 ==============
 sourceplus-sdk
 ==============
 
 
-    Add a short description here!
+    Search, curate, and enrich collections for AI training.
 
 
-A longer description of your project goes here...
+`Source.Plus <https://source.plus>`_ is a platform that enables users to search, curate, and enrich collections for AI training. This SDK provides a Python interface to the Source.Plus API.
+At this time, this SDK only allows the downloading of image files exported from Source.Plus.
 
 
-.. _pyscaffold-notes:
+----------------
+Before You Begin
+----------------
 
-Note
-====
+First, you'll need your Download Key from Source.Plus. To get your Download Key, go to the `settings <https://source.plus/settings/keys>`_ page
+in Source.Plus. Create a key if you don't already have one. This key is used to authenticate your requests to the Source.Plus API.
 
-This project has been set up using PyScaffold 4.5. For details and usage
-information on PyScaffold see https://pyscaffold.org/.
+Set this key as an environment variable in your shell. You can do this by adding the following line to your shell profile (e.g. ~/.bashrc, ~/.zshrc, etc.)::
+
+        export SOURCEPLUS_DOWNLOAD_KEY="your-download-key"
+
+If you prefer to not make this change, then you can also provide your API Key during the download process.
+
+------------
+Installation
+------------
+
+Next, you'll need to install the SDK. You can do this using pip::
+
+        pip install sourceplus-sdk
+
+-----
+Usage
+-----
+
+Once you have installed the SDK, you can use it download images from a parquet file.
+
+        sourceplus download_images -f /path/to/export.parquet -o /path/to/output/directory
+
+This will download all the image URLs from the parquet file to the output directory. If you have not set the API Key environment variable,
+the SDK will prompt you to enter your API Key.
+
+----------------
+Advanced Options
+----------------
+
+There are several options you can tune to adjust the behavior of the download process. You can see all the options by running::
+
+        sourceplus download_images --help
+
+This will show you all the available options and their descriptions.
